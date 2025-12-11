@@ -196,10 +196,10 @@ def generate_placeholder(municipality, location_type, category, width=1024, heig
     return buffer.getvalue()
 
 
-def generate_all_images():
-    """Generate all flag images."""
+def generate_all_images(limit=None):
+    """Generate flag images. If limit is set, only generate that many."""
     print("\n" + "=" * 60)
-    print("STEP 1: Generating Flag Images")
+    print(f"STEP 1: Generating Flag Images{f' (limit: {limit})' if limit else ''}")
     print("=" * 60)
 
     flag_id = 0
@@ -207,16 +207,27 @@ def generate_all_images():
     skipped = 0
     all_flags = []
 
+    done = False
     for country_data in MUNICIPALITIES_DATA:
+        if done:
+            break
         country = country_data["country"]
         region = country_data["region"]
 
         for municipality in country_data["municipalities"]:
+            if done:
+                break
             base_lat = municipality["latitude"]
             base_lon = municipality["longitude"]
 
             for i, location_type in enumerate(LOCATION_TYPES):
                 flag_id += 1
+
+                # Stop if limit reached
+                if limit and flag_id > limit:
+                    done = True
+                    break
+
                 category = CATEGORY_ASSIGNMENT.get(location_type, 0)
 
                 # Offset coordinates slightly for each location
@@ -507,18 +518,24 @@ def seed_backend_database(all_flags):
 # ============================================================
 
 def main():
+    # Check for test mode (only 4 flags)
+    test_mode = "--test" in sys.argv or "-t" in sys.argv
+    limit = 4 if test_mode else None
+
     print("=" * 60)
     print("  Municipal Flag NFT - ALL-IN-ONE Setup")
+    if test_mode:
+        print("  ** TEST MODE: Only 4 flags **")
     print("=" * 60)
     print("\nThis script will:")
-    print("  1. Generate 64 flag placeholder images")
+    print(f"  1. Generate {limit or 64} flag placeholder images")
     print("  2. Upload images to Pinata IPFS (if configured)")
     print("  3. Update metadata JSON files")
     print("  4. Seed backend database")
     print()
 
     # Step 1: Generate images
-    all_flags = generate_all_images()
+    all_flags = generate_all_images(limit=limit)
 
     # Step 2: Upload to IPFS
     all_flags = upload_to_ipfs(all_flags)
