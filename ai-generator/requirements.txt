@@ -1,0 +1,21 @@
+# AI Image Generation Dependencies
+# For Stable Diffusion (local)
+diffusers>=0.24.0
+torch>=2.0.0
+transformers>=4.35.0
+accelerate>=0.25.0
+safetensors>=0.4.0
+
+# Image processing
+Pillow>=10.0.0
+
+# For cloud APIs
+replicate>=0.22.0
+stability-sdk>=0.8.0
+requests>=2.31.0
+
+# Environment
+python-dotenv>=1.0.0
+
+# Utilities
+tqdm>=4.66.0

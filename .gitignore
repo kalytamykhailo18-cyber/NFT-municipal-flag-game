@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+.env.local
+
+# Build outputs
+build/
+dist/
+artifacts/
+cache/
+typechain-types/
+js-openai/
+docs/
+
+# Database
+*.db
+*.sqlite
+
+# Generated files
+ai-generator/output/
+ai-generator/metadata/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Misc
+*.map

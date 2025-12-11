@@ -1,0 +1,701 @@
+================================================================================
+MUNICIPAL FLAG NFT GAME - COMPLETE SETUP GUIDE
+================================================================================
+Version: 1.0.0
+Last Updated: December 2025
+For: Course Training & Development
+
+This guide explains how to run the entire project from scratch, including
+smart contracts, backend, frontend, and AI image generation.
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+1. Prerequisites
+2. Project Structure Overview
+3. Environment Configuration
+4. Smart Contracts Setup (Hardhat)
+5. Backend Setup (Python/FastAPI)
+6. Frontend Setup (React/Vite)
+7. AI Image Generator Setup
+8. Running the Complete System
+9. MetaMask Configuration for Students
+10. Testing Game Flows
+11. Admin Panel Usage
+12. Troubleshooting
+
+================================================================================
+1. PREREQUISITES
+================================================================================
+
+Required Software:
+- Node.js v18+ (https://nodejs.org/)
+- Python 3.10+ (https://www.python.org/)
+- Git (https://git-scm.com/)
+- MetaMask browser extension (https://metamask.io/)
+
+Required API Keys (for full functionality):
+- Pinata (IPFS): https://app.pinata.cloud/ (free tier available)
+- Replicate (AI): https://replicate.com/ (pay-as-you-go)
+- Google Maps API: https://console.cloud.google.com/ (for Street View)
+- PolygonScan API: https://polygonscan.com/apis (for contract verification)
+
+Testnet Requirements:
+- Polygon Amoy Testnet POL tokens (free from faucet)
+- Faucet: https://faucet.polygon.technology/
+
+================================================================================
+2. PROJECT STRUCTURE OVERVIEW
+================================================================================
+
+municipal-flag-nft/
+|
+|-- contracts/              # Solidity smart contracts (Hardhat)
+|   |-- contracts/          # Solidity source files
+|   |   |-- MunicipalFlagNFT.sol
+|   |-- scripts/            # Deployment and utility scripts
+|   |   |-- deploy.js
+|   |   |-- register-flags.js
+|   |-- test/               # Contract test files
+|   |   |-- MunicipalFlagNFT.test.js
+|   |-- hardhat.config.js
+|   |-- package.json
+|
+|-- backend/                # Python FastAPI server
+|   |-- routers/            # API endpoint handlers
+|   |   |-- admin.py        # Admin endpoints
+|   |   |-- auctions.py     # Auction system
+|   |   |-- countries.py
+|   |   |-- regions.py
+|   |   |-- municipalities.py
+|   |   |-- flags.py
+|   |   |-- users.py
+|   |   |-- rankings.py
+|   |-- services/           # External service integrations
+|   |   |-- google_maps.py  # Street View API
+|   |   |-- ai.py           # Replicate AI
+|   |   |-- ipfs.py         # Pinata IPFS
+|   |-- main.py             # FastAPI application entry
+|   |-- models.py           # SQLAlchemy database models
+|   |-- schemas.py          # Pydantic validation schemas
+|   |-- config.py           # Configuration settings
+|   |-- database.py         # Database connection
+|   |-- seed_data.py        # Demo data seeder
+|   |-- requirements.txt
+|
+|-- frontend/               # React application (Vite)
+|   |-- src/
+|   |   |-- components/     # Reusable UI components
+|   |   |-- pages/          # Page components
+|   |   |-- store/          # Redux state management
+|   |   |   |-- slices/     # Redux slices
+|   |   |-- services/       # API and Web3 services
+|   |   |-- contracts/      # Contract ABI (JSON)
+|   |-- package.json
+|
+|-- ai-generator/           # Standalone AI image generation
+|   |-- generate_flags.py   # Image generation script
+|   |-- upload_to_ipfs.py   # IPFS upload script
+|   |-- config.py           # Generator configuration
+|   |-- requirements.txt
+|
+|-- .env.example            # Environment template (root)
+
+================================================================================
+3. ENVIRONMENT CONFIGURATION
+================================================================================
+
+Step 1: Create root .env file
+------------------------------
+Copy .env.example to .env in the project root:
+
+    copy .env.example .env
+
+Edit .env with your values:
+
+    # =============================================================================
+    # GENERAL SETTINGS
+    # =============================================================================
+    PROJECT_NAME=Municipal Flag NFT Game
+    ENVIRONMENT=development
+    DEBUG=true
+
+    # =============================================================================
+    # BACKEND SETTINGS
+    # =============================================================================
+    BACKEND_HOST=0.0.0.0
+    BACKEND_PORT=8000
+    BACKEND_RELOAD=true
+
+    # Database (SQLite for local development)
+    DATABASE_URL=sqlite:///./nft_game.db
+
+    # Admin API Key (change this!)
+    ADMIN_API_KEY=your-secure-admin-key-here
+
+    # CORS Origins
+    CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173
+
+    # =============================================================================
+    # BLOCKCHAIN SETTINGS
+    # =============================================================================
+    # Your wallet private key (WITHOUT 0x prefix)
+    # NEVER share this! Use a test wallet only!
+    DEPLOYER_PRIVATE_KEY=your-private-key-here
+
+    # Polygon Amoy Testnet
+    POLYGON_AMOY_RPC_URL=https://rpc-amoy.polygon.technology
+    POLYGON_AMOY_CHAIN_ID=80002
+
+    # For contract verification on PolygonScan
+    POLYGONSCAN_API_KEY=your-polygonscan-api-key
+
+    # Deployed contract address (fill after deployment)
+    CONTRACT_ADDRESS=
+
+    # NFT Base URI (IPFS gateway)
+    NFT_BASE_URI=https://gateway.pinata.cloud/ipfs/
+
+    # =============================================================================
+    # IPFS SETTINGS (Pinata)
+    # =============================================================================
+    PINATA_API_KEY=your-pinata-api-key
+    PINATA_API_SECRET=your-pinata-api-secret
+    PINATA_JWT=your-pinata-jwt-token
+
+    # =============================================================================
+    # AI IMAGE GENERATION
+    # =============================================================================
+    SD_LOCAL_ENABLED=false
+    SD_USE_CLOUD_API=true
+    REPLICATE_API_TOKEN=your-replicate-api-token
+
+    # =============================================================================
+    # GOOGLE MAPS (for coordinate-to-NFT feature)
+    # =============================================================================
+    GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+
+    # =============================================================================
+    # GAME CONFIGURATION
+    # =============================================================================
+    FLAGS_PER_MUNICIPALITY=8
+    DEFAULT_STANDARD_PRICE=0.01
+    DEFAULT_PLUS_PRICE=0.02
+    DEFAULT_PREMIUM_PRICE=0.05
+
+
+Step 2: Create backend .env file
+---------------------------------
+Create backend/.env for local backend development:
+
+    # backend/.env
+    DATABASE_URL=sqlite:///./nft_game.db
+    ENVIRONMENT=development
+    DEBUG=true
+    BACKEND_HOST=0.0.0.0
+    BACKEND_PORT=8000
+    ADMIN_API_KEY=local-dev-admin-key
+    CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173
+
+
+Step 3: Create frontend .env file
+----------------------------------
+Create frontend/.env:
+
+    # frontend/.env
+    VITE_API_URL=http://localhost:8000/api
+    VITE_CONTRACT_ADDRESS=
+    VITE_CHAIN_ID=80002
+    VITE_CHAIN_NAME=Polygon Amoy Testnet
+    VITE_RPC_URL=https://rpc-amoy.polygon.technology
+    VITE_BLOCK_EXPLORER=https://amoy.polygonscan.com
+    VITE_IPFS_GATEWAY=https://gateway.pinata.cloud/ipfs
+
+================================================================================
+4. SMART CONTRACTS SETUP (Hardhat)
+================================================================================
+
+Step 1: Install dependencies
+-----------------------------
+Open terminal in contracts/ directory:
+
+    cd contracts
+    npm install
+
+Step 2: Compile contracts
+--------------------------
+    npx hardhat compile
+
+Expected output:
+    Compiled 2 Solidity files successfully
+
+Step 3: Run tests
+------------------
+    npx hardhat test
+
+Expected output:
+    MunicipalFlagNFT
+      Deployment
+        ✔ Should deploy successfully
+        ✔ Should set the correct name and symbol
+        ...
+    58 passing
+
+Step 4: Deploy to local network (for testing)
+----------------------------------------------
+Terminal 1 - Start local Hardhat node:
+    npx hardhat node
+
+Terminal 2 - Deploy:
+    npx hardhat run scripts/deploy.js --network localhost
+
+Step 5: Deploy to Polygon Amoy Testnet
+---------------------------------------
+Prerequisites:
+- DEPLOYER_PRIVATE_KEY set in root .env
+- POL tokens in wallet (get from faucet)
+
+Deploy:
+    npx hardhat run scripts/deploy.js --network amoy
+
+Save the CONTRACT_ADDRESS from output!
+
+Step 6: Register flags on contract
+-----------------------------------
+After deployment, register demo flags:
+
+    npx hardhat run scripts/register-flags.js --network amoy
+
+Step 7: Verify contract on PolygonScan (optional)
+--------------------------------------------------
+    npx hardhat verify --network amoy <CONTRACT_ADDRESS> "<BASE_URI>"
+
+Example:
+    npx hardhat verify --network amoy 0x1234... "https://gateway.pinata.cloud/ipfs/"
+
+================================================================================
+5. BACKEND SETUP (Python/FastAPI)
+================================================================================
+
+Step 1: Create virtual environment
+-----------------------------------
+    cd backend
+    python -m venv venv
+
+Step 2: Activate virtual environment
+-------------------------------------
+Windows:
+    venv\Scripts\activate
+
+Linux/Mac:
+    source venv/bin/activate
+
+Step 3: Install dependencies
+-----------------------------
+    pip install -r requirements.txt
+
+Step 4: Run the backend server
+-------------------------------
+    python main.py
+
+Or with uvicorn directly:
+    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+Expected output:
+    🚀 Municipal Flag NFT Game API started!
+    📝 Environment: development
+    📚 API Docs available at /docs
+
+Step 5: Access API documentation
+---------------------------------
+Open browser: http://localhost:8000/docs
+
+This shows all available API endpoints with interactive testing.
+
+Step 6: Verify database seeding
+--------------------------------
+The database auto-seeds on first startup with:
+- 4 countries (Spain, France, Germany, Italy)
+- 4 regions (1 per country)
+- 8 municipalities (2 per region)
+- 64 flags (8 per municipality)
+
+================================================================================
+6. FRONTEND SETUP (React/Vite)
+================================================================================
+
+Step 1: Install dependencies
+-----------------------------
+    cd frontend
+    npm install
+
+Step 2: Start development server
+---------------------------------
+    npm run dev
+
+Expected output:
+    VITE v5.x.x ready in xxx ms
+    ➜ Local:   http://localhost:5173/
+
+Step 3: Access the application
+-------------------------------
+Open browser: http://localhost:5173
+
+Step 4: Build for production (optional)
+----------------------------------------
+    npm run build
+
+Output is in frontend/dist/
+
+================================================================================
+7. AI IMAGE GENERATOR SETUP
+================================================================================
+
+The AI generator creates flag images using Stable Diffusion.
+
+Step 1: Create virtual environment
+-----------------------------------
+    cd ai-generator
+    python -m venv venv
+    venv\Scripts\activate  (Windows)
+
+Step 2: Install dependencies
+-----------------------------
+    pip install -r requirements.txt
+
+Step 3: Configure API key
+--------------------------
+Ensure REPLICATE_API_TOKEN is set in root .env file.
+
+Step 4: Generate flag images
+-----------------------------
+    python generate_flags.py
+
+This generates:
+- 64 flag images in ai-generator/output/
+- Metadata JSON files in ai-generator/metadata/
+
+Step 5: Generate metadata only
+-------------------------------
+If images exist and you just need metadata:
+    python generate_flags.py --metadata-only
+
+Step 6: Upload to IPFS
+-----------------------
+    python upload_to_ipfs.py
+
+Requires PINATA_API_KEY, PINATA_API_SECRET, PINATA_JWT in .env
+
+================================================================================
+8. RUNNING THE COMPLETE SYSTEM
+================================================================================
+
+Quick Start (3 terminals):
+---------------------------
+
+Terminal 1 - Backend:
+    cd backend
+    venv\Scripts\activate
+    python main.py
+
+Terminal 2 - Frontend:
+    cd frontend
+    npm run dev
+
+Terminal 3 - Hardhat (optional, for local blockchain):
+    cd contracts
+    npx hardhat node
+
+Access Points:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+- Local Blockchain: http://localhost:8545
+
+================================================================================
+9. METAMASK CONFIGURATION FOR STUDENTS
+================================================================================
+
+Each student needs their own MetaMask wallet.
+
+Step 1: Install MetaMask
+-------------------------
+https://metamask.io/download/
+
+Step 2: Create new wallet
+--------------------------
+- Click "Create a new wallet"
+- Save seed phrase securely (12 words)
+- Set password
+
+Step 3: Add Polygon Amoy Testnet
+---------------------------------
+In MetaMask:
+1. Click network dropdown (top)
+2. Click "Add network"
+3. Click "Add a network manually"
+4. Enter:
+   - Network Name: Polygon Amoy Testnet
+   - New RPC URL: https://rpc-amoy.polygon.technology
+   - Chain ID: 80002
+   - Currency Symbol: POL
+   - Block Explorer: https://amoy.polygonscan.com
+
+Step 4: Get test POL tokens
+----------------------------
+1. Copy wallet address from MetaMask
+2. Go to: https://faucet.polygon.technology/
+3. Select "Amoy" network
+4. Paste address
+5. Complete captcha
+6. Click "Submit"
+7. Wait for tokens (usually < 1 minute)
+
+Step 5: Connect to application
+-------------------------------
+1. Open http://localhost:5173
+2. Click "Connect Wallet" in header
+3. Approve MetaMask connection
+4. Approve network switch if prompted
+
+================================================================================
+10. TESTING GAME FLOWS
+================================================================================
+
+Flow 1: Browse Flags
+---------------------
+1. Go to http://localhost:5173
+2. Click "Explore Flags" or "Countries"
+3. Navigate: Country > Region > Municipality > Flag
+4. View flag details, category, price
+
+Flow 2: Express Interest (Claim First NFT)
+-------------------------------------------
+1. Connect MetaMask wallet
+2. Navigate to a flag
+3. Click "Express Interest" (or "Claim First NFT")
+4. Confirm transaction in MetaMask (gas fee only, no cost)
+5. Flag shows you as interested party
+
+Flow 3: Purchase Second NFT (Complete Pair)
+--------------------------------------------
+1. Find a flag where first NFT is claimed
+2. Click "Purchase Second NFT"
+3. Pay the flag price + gas
+4. Confirm in MetaMask
+5. You now own the complete pair!
+
+Flow 4: Create Auction
+-----------------------
+1. Go to Profile page
+2. Find a flag you own
+3. Click "Create Auction"
+4. Set min_price, buyout_price, end time
+5. Auction appears in Auctions page
+
+Flow 5: Place Bid on Auction
+-----------------------------
+1. Go to Auctions page
+2. Find an active auction
+3. Enter bid amount (must be >= min_price)
+4. Select your category (Standard/Plus/Premium)
+5. Click "Place Bid"
+6. Wait for auction to end or use buyout
+
+Flow 6: Admin Panel
+--------------------
+1. Go to http://localhost:5173/admin
+2. Enter Admin API Key when prompted
+3. Manage countries, regions, municipalities, flags
+4. Create demo users
+5. Generate NFTs from coordinates
+
+================================================================================
+11. ADMIN PANEL USAGE
+================================================================================
+
+Accessing Admin Panel:
+-----------------------
+URL: http://localhost:5173/admin
+API Key: Value of ADMIN_API_KEY in backend/.env
+
+Admin Features:
+
+Tab 1: Stats
+- View total counts: countries, regions, municipalities, flags
+- View active auctions, completed pairs
+- System health overview
+
+Tab 2: Countries
+- Add new country (name, code)
+- Edit existing countries
+- Toggle visibility (show/hide)
+- Delete countries
+
+Tab 3: Regions
+- Add regions to countries
+- Filter by country
+- Edit/delete regions
+
+Tab 4: Municipalities
+- Add municipalities to regions
+- Set coordinates (latitude, longitude)
+- Filter by region
+- Edit/delete municipalities
+
+Tab 5: Flags
+- Add flags to municipalities
+- Set category (Standard/Plus/Premium)
+- Set price and nfts_required
+- View IPFS hashes
+- Edit/delete flags
+
+Tab 6: Demo User
+- Create demo user with wallet address
+- Seed flag ownerships for testing
+- View demo user's owned flags
+- Delete demo user
+
+Tab 7: Generate NFT
+- Enter coordinates (latitude, longitude)
+- Select municipality
+- Choose location type and category
+- Check Street View availability
+- Generate full NFT (Street View > AI > IPFS > DB)
+
+Tab 8: Utilities
+- Seed demo data (if database empty)
+- Reset database
+- Sync IPFS hashes from Pinata
+
+================================================================================
+12. TROUBLESHOOTING
+================================================================================
+
+Problem: Backend won't start - database connection error
+---------------------------------------------------------
+Error: "could not translate host name postgres.railway.internal"
+
+Solution: Create backend/.env with SQLite:
+    DATABASE_URL=sqlite:///./nft_game.db
+
+
+Problem: Frontend can't connect to backend
+-------------------------------------------
+Error: Network error / CORS error
+
+Solutions:
+1. Verify backend is running on port 8000
+2. Check CORS_ORIGINS in backend/.env includes frontend URL
+3. Ensure VITE_API_URL in frontend/.env matches backend URL
+
+
+Problem: MetaMask not connecting
+---------------------------------
+Solutions:
+1. Refresh page
+2. Check MetaMask is unlocked
+3. Switch to correct network (Polygon Amoy)
+4. Try disconnecting and reconnecting
+
+
+Problem: Contract deployment fails
+-----------------------------------
+Error: "insufficient funds"
+
+Solution: Get POL from faucet:
+https://faucet.polygon.technology/
+
+
+Problem: Hardhat tests fail
+----------------------------
+Error: "Cannot find module"
+
+Solution:
+    cd contracts
+    npm install
+    npx hardhat clean
+    npx hardhat compile
+
+
+Problem: AI generation fails
+-----------------------------
+Error: "REPLICATE_API_TOKEN not set"
+
+Solution: Add to root .env:
+    REPLICATE_API_TOKEN=your-token-here
+
+
+Problem: IPFS upload fails
+---------------------------
+Error: "Pinata API error"
+
+Solutions:
+1. Verify PINATA_API_KEY, PINATA_API_SECRET, PINATA_JWT in .env
+2. Check Pinata account has available storage
+3. Verify internet connection
+
+
+Problem: Frontend shows wrong contract address
+-----------------------------------------------
+Solution:
+1. Update CONTRACT_ADDRESS in root .env
+2. Update VITE_CONTRACT_ADDRESS in frontend/.env
+3. Restart frontend dev server
+
+
+Problem: Transaction fails with "execution reverted"
+-----------------------------------------------------
+Solutions:
+1. Check contract is deployed on correct network
+2. Verify flag is registered on contract
+3. Check you have enough POL for gas + price
+4. Check flag hasn't already been claimed/purchased
+
+================================================================================
+QUICK REFERENCE - COMMON COMMANDS
+================================================================================
+
+Backend:
+    cd backend
+    python main.py
+
+Frontend:
+    cd frontend
+    npm run dev
+
+Contracts:
+    cd contracts
+    npx hardhat compile
+    npx hardhat test
+    npx hardhat run scripts/deploy.js --network amoy
+
+AI Generator:
+    cd ai-generator
+    python generate_flags.py
+
+API Documentation:
+    http://localhost:8000/docs
+
+================================================================================
+SECURITY NOTES
+================================================================================
+
+1. NEVER commit .env files to git
+2. NEVER share your DEPLOYER_PRIVATE_KEY
+3. Use a dedicated test wallet for development
+4. Change ADMIN_API_KEY in production
+5. The demo uses testnet only - no real money involved
+
+================================================================================
+SUPPORT
+================================================================================
+
+For questions or issues:
+1. Check this guide's troubleshooting section
+2. Review API docs at /docs endpoint
+3. Check contract on PolygonScan: https://amoy.polygonscan.com/
+
+================================================================================
+END OF GUIDE
+================================================================================

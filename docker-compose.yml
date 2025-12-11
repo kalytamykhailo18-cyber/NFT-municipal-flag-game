@@ -1,0 +1,77 @@
+# Municipal Flag NFT - Docker Compose for Local Development
+# For production on AWS, use individual services (RDS, EC2/ECS, S3+CloudFront)
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: municipal-flag-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localdev123
+      POSTGRES_DB: municipal_flag
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: municipal-flag-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:localdev123@db:5432/municipal_flag
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - ADMIN_API_KEY=local-dev-key
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173
+      # Add your API keys here or use .env file
+      - PINATA_API_KEY=${PINATA_API_KEY:-}
+      - PINATA_API_SECRET=${PINATA_API_SECRET:-}
+      - PINATA_JWT=${PINATA_JWT:-}
+      - REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN:-}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
+      - CONTRACT_ADDRESS=${CONTRACT_ADDRESS:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend (Development only - use S3+CloudFront for production)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: municipal-flag-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+      - VITE_CONTRACT_ADDRESS=${CONTRACT_ADDRESS:-}
+      - VITE_IPFS_GATEWAY=https://gateway.pinata.cloud/ipfs
+
+volumes:
+  postgres_data:

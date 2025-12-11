@@ -1,0 +1,11 @@
+# Railway Monorepo Configuration
+# This project contains multiple services: backend, frontend, and database
+
+[build]
+builder = "nixpacks"
+
+# Note: For monorepo deployments, each service should be deployed separately
+# Configure root directory in Railway dashboard for each service:
+# - Backend service: Set root directory to "backend"
+# - Frontend service: Set root directory to "frontend"
+# - PostgreSQL: Add from Railway's database templates
